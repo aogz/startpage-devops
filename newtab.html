@@ -77,6 +77,7 @@
         
         .bookmark {
             text-align: center;
+            cursor: pointer;
         }
         
         .bookmark a {
@@ -181,10 +182,10 @@
             <a target="_blank" rel="noopener" href="https://github.com/orgs/surfly/projects/75">📈<br />Board</a>
         </div>
         <div class="bookmark">
-            <a target="_blank" rel="noopener" onclick="startGame">🏔️<br />Bing</a>
+            <a target="_blank" rel="noopener" onclick="startGame()">🏔️<br />Bing</a>
         </div>
         <div class="bookmark">
-            <a target="_blank" rel="noopener" href="https://www.google.com/maps/d/u/0/edit?mid=1Hq5-GIRP6KNGHXQFBpXyzfmlDYydzms&ll=17.169329672414747%2C-6.02481235684121&z=4">🗺️<br />Geo Guesser</a>
+            <a target="_blank" rel="noopener" href="https://www.google.com/maps/d/u/0/edit?mid=1Hq5-GIRP6KNGHXQFBpXyzfmlDYydzms">🗺️<br />Geo Guesser</a>
         </div>
     </div>
     
@@ -194,7 +195,7 @@
 
             setTimeout(() => {
                 window.location.href = "https://www.bing.fi";
-            }, 1000);
+            }, 500);
         }
 
 
