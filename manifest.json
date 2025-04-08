@@ -5,13 +5,7 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "background": {
-    "service_worker": "service_worker.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://www.bing.fi/*"],
-      "js": ["content.js"]
-    }
-  ]
+  "action": {
+    "default_popup": "popup.html"
+  }
 }

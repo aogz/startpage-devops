@@ -129,6 +129,26 @@
             font-size: 16px;
         }
 
+        /* Countdown timer styles */
+        #countdown-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+
+        #countdown {
+            font-size: 72px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
         @media (prefers-color-scheme: light) {
             body {
                 background-color: #fff;
@@ -145,6 +165,14 @@
             }
 
             .bookmark a {
+                color: #000;
+            }
+            
+            #countdown-container {
+                background-color: rgba(255, 255, 255, 0.8);
+            }
+            
+            #countdown {
                 color: #000;
             }
         }
@@ -182,22 +210,29 @@
             <a target="_blank" rel="noopener" href="https://github.com/orgs/surfly/projects/75">📈<br />Board</a>
         </div>
         <div class="bookmark">
-            <a target="_blank" rel="noopener" onclick="startGame()">🏔️<br />Bing</a>
-        </div>
-        <div class="bookmark">
-            <a target="_blank" rel="noopener" href="https://www.google.com/maps/d/u/0/edit?mid=1Hq5-GIRP6KNGHXQFBpXyzfmlDYydzms">🗺️<br />Geo Guesser</a>
+            <a target="_blank" rel="noopener" onclick="startGame()">🏔️<br />Start Geo</a>
         </div>
     </div>
     
+    <!-- Countdown timer container -->
+    <div id="countdown-container">
+        <div id="countdown">45</div>
+        <p>Find the location!</p>
+    </div>
+    
+    <!-- Audio element for countdown sound -->
+    <audio id="countdownSound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
+    
     <script>
+        let countdownInterval = null;
+        
         startGame = () => {
-            surflyExtension.runtime.sendMessage({"event_type": "start_game"});
-
-            setTimeout(() => {
-                window.location.href = "https://www.bing.fi";
-            }, 500);
+            chrome.virtualSession.apiRequest({
+                cmd: "send_chat_message",
+                message: "Game started! Hurry up: https://geo.aogz.me/map",
+            });
+            startCountdown(45);
         }
-
 
         function goTo(event) {
             let url = document.getElementById("urlInput").value;
@@ -206,13 +241,13 @@
             }
             
             if (myIndex === controlIndex) {
-                surflyExtension.surflySession.apiRequest({
+                chrome.virtualSession.apiRequest({
                     cmd: "relocate",
                     url: url,
                     newTab: false,
                 });
             } else {
-                surflyExtension.runtime.sendMessage({
+                chrome.runtime.sendMessage({
                     type: "navigate",
                     url: url,
                     clientIndex: controlIndex,
@@ -221,21 +256,77 @@
         }
         
         function startScreensharing() {
-            surflyExtension.surflySession.apiRequest({
+            chrome.virtualSession.apiRequest({
                 cmd: "start_screensharing",
             });
         }
         
         function shareFile(file) {
-            surflyExtension.surflySession.apiRequest({
+            chrome.virtualSession.apiRequest({
                 cmd: "upload_file",
                 file: file,
             });
         }
         
+        // Countdown function
+        function startCountdown(seconds) {
+            const countdownContainer = document.getElementById('countdown-container');
+            const countdownElement = document.getElementById('countdown');
+            const countdownSound = document.getElementById('countdownSound');
+            
+            // Clear any existing interval
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            // Set initial countdown value
+            countdownElement.textContent = seconds;
+            
+            // Show countdown container
+            countdownContainer.style.display = 'block';
+            
+            countdownInterval = setInterval(() => {
+                seconds--;
+                countdownElement.textContent = seconds;
+                
+                // Play sound at specific intervals
+                if (seconds <= 5 && seconds > 0) {
+                    countdownSound.play();
+                }
+                
+                // Send message to chat at specific intervals
+                if (seconds % 5 === 0 && seconds > 0) {
+                    chrome.virtualSession.apiRequest({
+                        cmd: "send_chat_message",
+                        message: `Countdown: ${seconds}`,
+                    });
+                }
+                
+                if (seconds === 0) {
+                    clearInterval(countdownInterval);
+                    
+                    // Hide countdown container
+                    countdownContainer.style.display = 'none';
+                    
+                    // Open results page
+                    chrome.virtualSession.apiRequest({
+                        cmd: "relocate",
+                        url: "https://geo.aogz.me/results/",
+                        newTab: true,
+                    });
+                    
+                    // Notify service worker that game is finished
+                    chrome.runtime.sendMessage({
+                        event_type: "game_finished",
+                        result: "Time's up!"
+                    });
+                }
+            }, 1000);
+        }
+        
         let myIndex = null;
         let controlIndex = null;
-        surflyExtension.surflySession.onMessage.addListener(async (message, sender) => {
+        chrome.virtualSession.onMessage.addListener(async (message, sender) => {
             const surflyEventType = message?.event_type;
             if (surflyEventType === "host_changed") {
                 myIndex = message.my_index;
@@ -243,6 +334,12 @@
                 if (message.controlIndex !== message.leaderIndex) {
                     controlIndex = message.controlIndex;
                 }
+            } else if (surflyEventType === "start_countdown") {
+                // Start the countdown when message is received
+                startCountdown(message.countdown);
+            } else if (surflyEventType === "countdown") {
+                // Update countdown if needed (for synchronization)
+                document.getElementById('countdown').textContent = message.countdown;
             }
         });
         
@@ -258,87 +355,6 @@
             input.click();
         });
         
-        // Add Snake game code
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size to window size
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // Snake game variables
-        let snake = [{x: 10, y: 10}];
-        let food = {x: 15, y: 15};
-        let dx = 1;
-        let dy = 0;
-        const gridSize = 20;
-        let gameSpeed = 100;
-        let gameLoop;
-        
-        // Game controls
-        document.addEventListener('keydown', (e) => {
-            switch(e.key) {
-                case 'ArrowUp':
-                if (dy !== 1) { dx = 0; dy = -1; }
-                break;
-                case 'ArrowDown':
-                if (dy !== -1) { dx = 0; dy = 1; }
-                break;
-                case 'ArrowLeft':
-                if (dx !== 1) { dx = -1; dy = 0; }
-                break;
-                case 'ArrowRight':
-                if (dx !== -1) { dx = 1; dy = 0; }
-                break;
-            }
-        });
-        
-        function generateFood() {
-            food = {
-                x: Math.floor(Math.random() * (canvas.width / gridSize)),
-                y: Math.floor(Math.random() * (canvas.height / gridSize))
-            };
-        }
-        
-        function drawGame() {
-            // Clear canvas with transparency
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Move snake
-            const head = {
-                x: (snake[0].x + dx + Math.floor(canvas.width / gridSize)) % Math.floor(canvas.width / gridSize),
-                y: (snake[0].y + dy + Math.floor(canvas.height / gridSize)) % Math.floor(canvas.height / gridSize)
-            };
-            
-            snake.unshift(head);
-            
-            // Check if food eaten
-            if (head.x === food.x && head.y === food.y) {
-                generateFood();
-            } else {
-                snake.pop();
-            }
-            
-            // Draw snake
-            ctx.fillStyle = '#0f0';
-            snake.forEach(segment => {
-                ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 2, gridSize - 2);
-            });
-            
-            // Draw food
-            ctx.fillStyle = '#f00';
-            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
-        }
-        
-        // Start game
-        generateFood();
-        gameLoop = setInterval(drawGame, gameSpeed);
-        
-        // Add this before the snake game code
         // Update date and time
         function updateDateTime() {
             const now = new Date();
@@ -395,8 +411,11 @@
         // Add before the initial updates
         async function updateBambooHRData() {
             try {
-                const response = await fetch('https://whosout.onrender.com/api/bamboo');
+                const response = await fetch('https://whosout.aogz.me/api/bamboo');
                 const data = await response.json();
+                
+                // Get today's date in ISO format (YYYY-MM-DD)
+                const today = new Date().toISOString().split('T')[0];
 
                 // Update the DOM
                 const timeOffElement = document.getElementById('time-off');
@@ -417,7 +436,12 @@
             }
         }
 
-
+        // Helper function to calculate years
+        function calculateYears(dateString) {
+            const startDate = new Date(dateString);
+            const today = new Date();
+            return today.getFullYear() - startDate.getFullYear();
+        }
 
         // Initial updates
         updateDateTime();
@@ -429,8 +453,7 @@
         // Update weather every 30 minutes
         setInterval(updateWeather, 30 * 60 * 1000);
 
-        updateBambooHRData();  // Add this line
-
+        updateBambooHRData();
     </script>
 </body>
 </html>
