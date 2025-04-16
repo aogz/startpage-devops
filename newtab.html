@@ -217,11 +217,12 @@
     <!-- Countdown timer container -->
     <div id="countdown-container">
         <div id="countdown">45</div>
-        <p>Find the location!</p>
+        <p>You have 45 seconds to find the location</p>
+        <p>Link is the chat or geo.aogz.me/map</p>
     </div>
     
     <!-- Audio element for countdown sound -->
-    <audio id="countdownSound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
+    <audio id="countdownSound" src="countdown.mp3"></audio>
     
     <script>
         let countdownInterval = null;
@@ -290,7 +291,7 @@
                 countdownElement.textContent = seconds;
                 
                 // Play sound at specific intervals
-                if (seconds <= 5 && seconds > 0) {
+                if (seconds <= 11 && seconds > 0) {
                     countdownSound.play();
                 }
                 
@@ -313,12 +314,6 @@
                         cmd: "relocate",
                         url: "https://geo.aogz.me/results/",
                         newTab: true,
-                    });
-                    
-                    // Notify service worker that game is finished
-                    chrome.runtime.sendMessage({
-                        event_type: "game_finished",
-                        result: "Time's up!"
                     });
                 }
             }, 1000);

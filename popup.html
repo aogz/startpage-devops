@@ -1,1 +1,22 @@
-<a href="https://geo.aogz.me/map" target="_blank">Geo Map</a>
+<a href="https://geo.aogz.me/map" target="_blank" id="geo-map-link">
+    Geo Map 
+</a>
+
+<p id="countdown"></p>
+
+<script>
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.event_type === "countdown") {
+            document.getElementById("countdown").textContent = message.countdown;
+
+        }
+    });
+
+    browser.virtualSession.getParticipants().then(participants => {
+        const me = participants.find(p => !!p.self);
+        if (me) {
+            document.getElementById("geo-map-link").href = `https://geo.aogz.me/map?name=${me.name}`;
+            document.getElementById("geo-map-link").textContent = `Geo Map (${me.name})`;
+        }
+    });
+</script>
