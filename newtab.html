@@ -290,6 +290,17 @@
                 seconds--;
                 countdownElement.textContent = seconds;
                 
+                console.log(seconds);
+                chrome.virtualSession.broadcastMessage({
+                    type: "countdown",
+                    value: seconds,
+                });
+
+                chrome.runtime.sendMessage({
+                    type: "countdown",
+                    value: seconds,
+                });
+
                 // Play sound at specific intervals
                 if (seconds <= 11 && seconds > 0) {
                     countdownSound.play();

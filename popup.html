@@ -1,22 +1,47 @@
-<a href="https://geo.aogz.me/map" target="_blank" id="geo-map-link">
+<a href="#" id="geo-map-link">
     Geo Map 
 </a>
 
 <p id="countdown"></p>
 
 <script>
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.event_type === "countdown") {
-            document.getElementById("countdown").textContent = message.countdown;
-
+    let mapWindow = null;
+    chrome.virtualSession.onMessage.addListener(messageData => {
+        if (messageData?.type === 'countdown') {
+            document.getElementById("countdown").textContent = messageData.value;
+            if (mapWindow) {
+                mapWindow.postMessage({
+                    type: 'countdown',
+                    value: messageData.value,
+                }, '*');
+            }
         }
     });
 
-    browser.virtualSession.getParticipants().then(participants => {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message?.type === 'countdown') {
+            document.getElementById("countdown").textContent = message.value;
+            if (mapWindow) {
+                mapWindow.postMessage({
+                    type: 'countdown',
+                    value: message.value,
+                }, '*');
+            }
+        }
+    });
+
+    chrome.virtualSession.getParticipants().then(participants => {
         const me = participants.find(p => !!p.self);
         if (me) {
-            document.getElementById("geo-map-link").href = `https://geo.aogz.me/map?name=${me.name}`;
-            document.getElementById("geo-map-link").textContent = `Geo Map (${me.name})`;
+            const mapUrl = `https://geo.aogz.me/map?name=${me.name}`;
+            const link = document.getElementById("geo-map-link");
+            link.textContent = `Geo Map (${me.name})`;
+            
+            // Add click handler to open in new window instead of using href
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                mapWindow = window.open(mapUrl, '_blank');
+            });
         }
     });
 </script>
